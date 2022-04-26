@@ -37,7 +37,7 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal Blazor.CliTool.sln
     - name: Pack
-      run: dotnet pack --no-build --no-restore /p:Version ${{ steps.gitversion.outputs.nuGetVersion }} --output-path ./artifacts Blazor.CliTool/Blazor.CliTool.csproj
+      run: dotnet pack --no-build --no-restore /p:Version ${{ steps.gitversion.outputs.nuGetVersion }} --output ./artifacts Blazor.CliTool/Blazor.CliTool.csproj
     - name: Publish
       run: dotnet nuget push ./artifacts/*.nupkg -k $NUGET_AUTH_TOKEN -s https://api.nuget.org/v3/index.json
       env:
