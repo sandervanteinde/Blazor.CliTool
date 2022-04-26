@@ -7,7 +7,20 @@
     <Nullable>enable</Nullable>
 	<PackAsTool>true</PackAsTool>
 	<ToolCommandName>blazor</ToolCommandName>
+	<PackageProjectUrl>https://github.com/sandervanteinde/Blazor.CliTool</PackageProjectUrl>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<RepositoryUrl>https://github.com/sandervanteinde/Blazor.CliTool</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
+	<PackageTags>Blazor;Cli;</PackageTags>
+	<PackageLicenseFile>C:\Git\Blazor.CliTool\LICENSE</PackageLicenseFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Cocona" Version="2.0.3" />
