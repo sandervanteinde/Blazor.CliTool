@@ -1,5 +1,7 @@
 # Blazor.CliTool
 
+[![Build and Push to NuGet](https://github.com/sandervanteinde/Blazor.CliTool/actions/workflows/dotnet.yml/badge.svg)](https://github.com/sandervanteinde/Blazor.CliTool/actions/workflows/dotnet.yml)
+
 A simple Cli tool that can be installed to enable easily generating Blazor components in an Angular CLI fashion:
 
 ## Installation
