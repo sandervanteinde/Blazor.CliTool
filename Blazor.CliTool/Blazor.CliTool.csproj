@@ -12,7 +12,7 @@
 	<RepositoryUrl>https://github.com/sandervanteinde/Blazor.CliTool</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
 	<PackageTags>Blazor;Cli;</PackageTags>
-	<PackageLicenseFile>C:\Git\Blazor.CliTool\LICENSE</PackageLicenseFile>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
