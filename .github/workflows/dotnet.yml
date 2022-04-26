@@ -1,4 +1,4 @@
-name: .NET
+name: Build and Push to NuGet
 
 on:
   push:
