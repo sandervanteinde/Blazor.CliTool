@@ -9,8 +9,6 @@ var builder = CoconaApp.CreateBuilder();
 builder.Services
     .AddLogging(opts =>
     {
-
-
         if (builder.Environment.IsDevelopment())
         {
             opts.SetMinimumLevel(LogLevel.Trace);
