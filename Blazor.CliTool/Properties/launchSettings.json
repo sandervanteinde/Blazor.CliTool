@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Rademaker.BlazorCliTool": {
+      "commandName": "Project",
+      "commandLineArgs": "component Test",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

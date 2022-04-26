@@ -1,0 +1,22 @@
+assembly-versioning-scheme: MajorMinorPatch
+mode: mainline
+branches:
+  master:
+    tag: ''
+    increment: Patch
+    regex: ^main$
+    is-mainline: true
+  feature:
+    regex: .*/
+    tag: feature
+    increment: Patch
+    source-branches: ['main', 'feature']
+    track-merge-target: true
+  pull-request:
+    tag: pr
+    increment: Patch
+  release:
+    tag: ''
+    is-release-branch: true
+    increment: Inherit
+    is-mainline: true
