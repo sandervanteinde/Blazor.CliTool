@@ -3,23 +3,46 @@ using Cocona;
 
 namespace Blazor.CliTool.Commands;
 
-internal static class ComponentCommand
+internal class ComponentCommand
 {
-    public static async Task RunCommand([Argument(Order = 1)] string name, IBlazorContext blazorContext, ITemplateWriter templateWriter)
+    private readonly IBlazorContext _blazorContext;
+    private readonly ITemplateWriter _templateWriter;
+
+    public ComponentCommand(IBlazorContext blazorContext, ITemplateWriter templateWriter)
     {
-        var @namespace = blazorContext.GetNamespace();
+        _blazorContext = blazorContext;
+        _templateWriter = templateWriter;
+    }
 
-        await templateWriter.WriteTemplateAsync($"{name}.razor", @$"<h3>{name}</h3>");
+    [Command("component", Aliases = new[] { "c" }, Description = "Generates a component")]
+    public async Task RunCommand([Argument(Order = 1)] string name)
+    {
+        await _templateWriter.WriteTemplateAsync($"{name}.razor", @$"<h3>{name}</h3>");
+        await _templateWriter.WriteTemplateAsync($"{name}.razor.cs", GetTemplateForCsFile(name));
+        await _templateWriter.WriteTemplateAsync($"{name}.razor.css", string.Empty);
 
-        await templateWriter.WriteTemplateAsync($"{name}.razor.cs", $@"namespace {@namespace};
+        _templateWriter.PrintGeneratedOutput();
+    }
+
+    private string GetTemplateForCsFile(string name)
+    {
+        var @namespace = _blazorContext.GetNamespace();
+        if (_blazorContext.IsFileScopedNamespacesRequested())
+        {
+            return $@"namespace {@namespace};
 
 public partial class {name}
 {{
 
-}}");
+}}";
+        }
 
-        await templateWriter.WriteTemplateAsync($"{name}.razor.css", string.Empty);
-
-        templateWriter.PrintGeneratedOutput();
+        return $@"namespace {@namespace}
+{{
+    public partial class {name}
+    {{
+    
+    }}
+}}";
     }
 }

@@ -3,17 +3,17 @@ using System.Text.RegularExpressions;
 
 namespace Blazor.CliTool.Services;
 
-public class NamespaceFixer : INamespaceFixer
+public class NamespaceSanitizer : INamespaceSanitizer
 {
     private static readonly Regex dotNumberRegex = new Regex(@"\.(\d)", RegexOptions.Compiled);
     private readonly ILogger _logger;
 
-    public NamespaceFixer(ILogger<NamespaceFixer> logger)
+    public NamespaceSanitizer(ILogger<NamespaceSanitizer> logger)
     {
         _logger = logger;
     }
 
-    public string FixNamespace(string original)
+    public string SanitizeNamespace(string original)
     {
         var newNamespace = dotNumberRegex.Replace(original, "._$1")
             .Replace(' ', '_');

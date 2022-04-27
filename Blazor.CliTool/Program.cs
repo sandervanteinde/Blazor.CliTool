@@ -16,11 +16,10 @@ builder.Services
     })
     .AddSingleton<IBlazorContext, BlazorContext>()
     .AddSingleton<ITemplateWriter, FileTemplateWriter>()
-    .AddTransient<INamespaceFixer, NamespaceFixer>();
+    .AddTransient<INamespaceSanitizer, NamespaceSanitizer>();
 
 var app = builder.Build();
 
-app.AddCommand("component", ComponentCommand.RunCommand)
-    .WithAliases("c");
+app.AddCommands<ComponentCommand>();
 
 await app.RunAsync();
