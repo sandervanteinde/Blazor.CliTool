@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "type": "object",
+  "properties": {
+    "namespace": {
+      "enum": [
+        "file",
+        "block"
+      ]
+    },
+    "generateInFolder": {
+      "type": "boolean"
+    },
+    "styleSheetExtension": {
+      "type": "string",
+      "default": "css"
+    }
+  }
+}

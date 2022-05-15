@@ -12,7 +12,12 @@ internal class FileTemplateWriter : ITemplateWriter
 
     public async Task WriteTemplateAsync(string templateName, string templateContent)
     {
-        var filePath = Path.Combine(_context.GetOutputDirectory(), templateName);
+        var outputDirectory = _context.GetOutputDirectory();
+        if (!Directory.Exists(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+        var filePath = Path.Combine(outputDirectory, templateName);
         using var fileStream = File.Create(filePath);
         using var textWriter = new StreamWriter(fileStream);
 

@@ -1,0 +1,6 @@
+{
+  "$schema": "../schema/v1/schema.json",
+  "namespace": "file",
+  "generateInFolder": true,
+  "styleSheetExtension": "scss"
+}

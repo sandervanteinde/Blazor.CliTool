@@ -5,7 +5,7 @@ namespace Blazor.CliTool.Services;
 
 public class NamespaceSanitizer : INamespaceSanitizer
 {
-    private static readonly Regex dotNumberRegex = new Regex(@"\.(\d)", RegexOptions.Compiled);
+    private static readonly Regex dotNumberRegex = new(@"\.(\d)", RegexOptions.Compiled);
     private readonly ILogger _logger;
 
     public NamespaceSanitizer(ILogger<NamespaceSanitizer> logger)

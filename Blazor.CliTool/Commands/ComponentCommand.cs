@@ -17,9 +17,10 @@ internal class ComponentCommand
     [Command("component", Aliases = new[] { "c" }, Description = "Generates a component")]
     public async Task RunCommand([Argument(Order = 1)] string name)
     {
+        _blazorContext.Initialize(Environment.CurrentDirectory, name);
         await _templateWriter.WriteTemplateAsync($"{name}.razor", @$"<h3>{name}</h3>");
         await _templateWriter.WriteTemplateAsync($"{name}.razor.cs", GetTemplateForCsFile(name));
-        await _templateWriter.WriteTemplateAsync($"{name}.razor.css", string.Empty);
+        await _templateWriter.WriteTemplateAsync($"{name}.razor.{_blazorContext.GetRequestedStylesheetExtension()}", string.Empty);
 
         _templateWriter.PrintGeneratedOutput();
     }

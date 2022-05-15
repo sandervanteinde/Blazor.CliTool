@@ -1,4 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Blazor.CliTool.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -6,47 +10,87 @@ namespace Blazor.CliTool.Services;
 
 public class BlazorContext : IBlazorContext
 {
-    private readonly string _runningDirectory;
-    private readonly Lazy<string> _namespace;
-    private readonly Lazy<(XElement projectFile, string location)?> _projectFile;
+    private string? _runningDirectory;
+    private BlazorToolConfiguration? _configuration;
+    private XElement? _projectFile;
+    private string? _projectFileLocation;
+    private string? _componentName;
+
     private readonly INamespaceSanitizer _namespaceSanitizer;
     private readonly ILogger<BlazorContext> _logger;
 
 
     public BlazorContext(INamespaceSanitizer namespaceFixer, ILogger<BlazorContext> logger)
     {
-        _runningDirectory = Environment.CurrentDirectory;
-        _namespace = new(DetermineNamespaceByCurrentDirectory);
         _namespaceSanitizer = namespaceFixer;
         _logger = logger;
-        _projectFile = new Lazy<(XElement projectFile, string location)?>(GetProjectFile);
     }
+
+    public void Initialize(string runningDirectory, string componentName)
+    {
+        _runningDirectory = runningDirectory;
+        _componentName = componentName;
+        _logger.LogDebug("Finding project info and configuration json.");
+        var directory = new DirectoryInfo(runningDirectory);
+        while (directory is not null)
+        {
+            var projectFileLocation = directory.EnumerateFiles("*.csproj")
+                .FirstOrDefault();
+
+            if (projectFileLocation is not null)
+            {
+                _projectFileLocation = projectFileLocation.FullName;
+                _projectFile = XElement.Load(projectFileLocation.FullName);
+            }
+
+            var configFile = directory.EnumerateFiles("blazor-tool.json")
+                .FirstOrDefault();
+
+            if (configFile is not null)
+            {
+                _configuration = ReadConfigFile(configFile);
+            }
+
+            directory = directory.Parent;
+        }
+
+        if (_configuration is null)
+        {
+            _configuration = BlazorToolConfiguration.Default;
+        }
+    }
+
 
     public bool IsFileScopedNamespacesRequested()
     {
         _logger.LogDebug("Checking if file scoped namespaces were requested");
+        var settingFromConfiguration = _configuration?.Namespace;
 
-        var projectFile = _projectFile.Value;
-        if (!projectFile.HasValue)
+        if (settingFromConfiguration is not null)
+        {
+            return settingFromConfiguration == NamespaceConfigurationOption.File;
+        }
+
+        if (_projectFile is null)
         {
             _logger.LogDebug("No csproj found, for safety. Not using file-scoped namespaces.");
             return false;
         }
 
-        var csproj = projectFile.Value.projectFile;
+        var csproj = _projectFile;
         var targetFrameworkNodes = csproj.Descendants("TargetFramework")
             .Select(node => node.Value)
             .ToList();
 
         _logger.LogDebug("Found {FrameworkNodes} framework nodes in csproj file.", targetFrameworkNodes.Count);
 
-        if (!targetFrameworkNodes.Any())
+        var targetFramework = targetFrameworkNodes.FirstOrDefault();
+        if (targetFramework is null)
         {
             _logger.LogDebug("csproj did not contain any <TargetFramework> xml nodes. Not using file-scoped namespaces.");
             return false;
         }
 
-        var targetFramework = targetFrameworkNodes.FirstOrDefault();
         var targetFrameworkSupportsFileScoped = IsSupportedFrameworkForFileScopedNamespace(targetFramework);
         _logger.LogDebug($@"Framework {{TargetFramework}} {(targetFrameworkSupportsFileScoped ? "does" : "does not")} support file scoped namespaces.", targetFramework);
         return targetFrameworkSupportsFileScoped;
@@ -54,32 +98,58 @@ public class BlazorContext : IBlazorContext
 
     public string GetNamespace()
     {
-        return _namespace.Value;
+        return DetermineNamespaceByCurrentDirectory();
     }
 
     public string GetOutputDirectory()
     {
+        ValidateInitialized();
+        if (_configuration.GenerateInFolder)
+        {
+            return Path.Combine(_runningDirectory, _componentName);
+        }
         return _runningDirectory;
+    }
+
+    public string GetRequestedStylesheetExtension()
+    {
+        ValidateInitialized();
+        return _configuration.StylesheetExtension;
+    }
+
+    [MemberNotNull(nameof(_runningDirectory), nameof(_componentName), nameof(_configuration))]
+    private void ValidateInitialized()
+    {
+        ValidateValueNotNull(_runningDirectory);
+        ValidateValueNotNull(_componentName);
+        ValidateValueNotNull(_configuration);
+
+        static void ValidateValueNotNull<T>([NotNull] T value)
+        {
+            if (value is null)
+            {
+                throw new InvalidOperationException("The BlazorContext was not initialized prior to invoking this method.");
+            }
+        }
     }
 
     private string DetermineNamespaceByCurrentDirectory()
     {
+        ValidateInitialized();
         _logger.LogDebug("Determining namespace");
-        var projectFileResult = _projectFile.Value;
-        if (projectFileResult is null)
+        if (_projectFile is null)
         {
             _logger.LogDebug("No project file found, returning default namespace 'App'.");
             return "App";
         }
 
-        var (csproj, location) = projectFileResult.Value;
-
-        var directory = Path.GetDirectoryName(location)!;
-        var rootNamespace = csproj
+        var directory = Path.GetDirectoryName(_projectFileLocation)!;
+        var rootNamespace = _projectFile
             .Descendants("RootNamespace")
             .Select(e => e.Value)
             .FirstOrDefault()
-            ?? Path.GetFileNameWithoutExtension(location);
+            ?? Path.GetFileNameWithoutExtension(_projectFileLocation)
+            ?? throw new InvalidOperationException("Unable to get a file name from the cs project file.");
 
         var nestedDirectoryPath = _runningDirectory.Replace(directory, string.Empty)
             .TrimStart(Path.DirectorySeparatorChar)
@@ -92,34 +162,31 @@ public class BlazorContext : IBlazorContext
         return _namespaceSanitizer.SanitizeNamespace(fullNamespace);
     }
 
-    private (XElement projectFile, string location)? GetProjectFile()
+    private static bool IsSupportedFrameworkForFileScopedNamespace(string framework)
     {
-        _logger.LogDebug("Determining project file location");
-        var foldersProcessed = new LinkedList<string>();
-
-        var directory = new DirectoryInfo(_runningDirectory);
-
-        while (directory is not null)
-        {
-            _logger.LogDebug("Checking if directory '{Directory}' contains csproj file", directory.FullName);
-            var projectFileLocation = directory.EnumerateFiles("*.csproj")
-                .FirstOrDefault();
-            if (projectFileLocation is not null)
-            {
-                var xmlReader = XElement.Load(projectFileLocation.FullName);
-                return (xmlReader, projectFileLocation.FullName);
-            }
-
-            foldersProcessed.AddFirst(directory.Name);
-            directory = directory.Parent;
-        }
-
-        _logger.LogDebug("No csproj found in parent directory tree.");
-        return null;
+        return Regex.IsMatch(framework, "net[6789]\\.0.*");
     }
 
-    private bool IsSupportedFrameworkForFileScopedNamespace(string framework)
+    private BlazorToolConfiguration ReadConfigFile(FileInfo configFile)
     {
-        return Regex.IsMatch(framework, "net[67]\\.0.*");
+        using var fs = configFile.OpenRead();
+        BlazorToolConfigurationInput? input = null;
+        try
+        {
+            input = JsonSerializer.Deserialize<BlazorToolConfigurationInput>(fs, new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) } });
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError("Failed to parse file {FileName}:{NewLine}\t{Reason}", configFile.FullName, Environment.NewLine, ex.Message);
+            throw;
+        }
+
+        if (input is null)
+        {
+            _logger.LogError("Failed to parse file {FileName}: Parsing resulted in an empty object.", configFile.FullName);
+            throw new InvalidOperationException("The filename was null.");
+        }
+
+        return input.ApplyDefaults();
     }
 }
